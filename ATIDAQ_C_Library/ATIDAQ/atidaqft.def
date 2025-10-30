@@ -1,0 +1,10 @@
+LIBRARY atidaqft
+EXPORTS
+    createCalibration
+    destroyCalibration
+    SetToolTransform
+    SetForceUnits
+    SetTorqueUnits
+    SetTempComp
+    Bias
+    ConvertToFT

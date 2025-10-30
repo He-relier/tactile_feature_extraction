@@ -152,7 +152,7 @@ tcp_x = tcp_x_offset*math.sin(math.pi/4) + tcp_y_offset*math.cos(math.pi/4)
 tcp_y = tcp_x_offset*math.cos(math.pi/4) - tcp_y_offset*math.sin(math.pi/4)
 #change theq cam from data_collection/gather_data
 # Resume from last completed sample +1 (0 for new dataset):
-resume_from = 577
+resume_from = 1625
 
 if resume_from == 0:
     resume = False

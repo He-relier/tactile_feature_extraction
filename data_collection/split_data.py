@@ -8,7 +8,7 @@ data_path     = BASE_DATA_PATH
 indir_name    = "data"
 outdir_names  = ["train", "val"]
 split         = 0.8           # 训练集占比
-need_total    = 7000          # <── 新增：期望总样本数（None 或 <= 实际行数）
+need_total    = 1500          # <── 新增：期望总样本数（None 或 <= 实际行数）
 
 # 1. 读标签 -----------------------------------------------------------------
 targets_df = pd.read_csv(f"{data_path}/labels.csv")

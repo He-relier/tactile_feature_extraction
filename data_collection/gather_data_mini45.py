@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from time import sleep
+import os
+import ctypes
 #from tactile_feature_extraction.utils.utils_ft_sensor import Sensor
 
 #for mini45 FT sensor
@@ -92,10 +94,16 @@ class DataGatherer_45(object):
 
 		#for mini45 FT sensor
 		#=============================
-		self._dll_path  = r"E:\ATI_force\ATIDAQ C Library\ATIDAQ\atidaqft.dll"
-		self._cal_file  = r"E:\ATI_force\tactile_feature_extraction\FT39618.cal"  
+		current_dir = os.path.dirname(os.path.abspath(__file__))
+		dll_path = os.path.join(current_dir, '..', 'ATIDAQ_C_Library/ATIDAQ/', 'atidaqft.dll')
+		dll_path = os.path.normpath(dll_path)
 
-		self._lib = C.cdll.LoadLibrary(self._dll_path)
+		print(f'Loading ATI DLL from: {dll_path}')
+		cal_path= os.path.join(current_dir, 'FT39618.cal')
+		self._cal_file = os.path.normpath(cal_path)
+		print(f'Loading ATI cal from: {self._cal_file}')
+
+		self._lib = C.cdll.LoadLibrary(dll_path)
 		self._lib.atift_create.restype = c_void_p
 		self._lib.atift_create.argtypes = [c_char_p, c_uint16]
 		self._lib.atift_destroy.argtypes = [c_void_p]
@@ -105,19 +113,19 @@ class DataGatherer_45(object):
 		self._lib.atift_set_torque_units.argtypes = [c_void_p, c_char_p]
 		self._lib.atift_bias6.argtypes = [c_void_p, C.POINTER(c_double)]
 		self._lib.atift_convert6.argtypes = [c_void_p, C.POINTER(c_double), C.POINTER(c_double)]
- # 3) 创建校准（index 常用 1），单位统一为 SI
+
 		self._cal = self._lib.atift_create(c_char_p(self._cal_file.encode('utf-8')), 1)
 		if not self._cal:
-			raise RuntimeError("加载 ATI 校准文件失败")
+			raise RuntimeError("fail to load ATI calibration file")
 		if self._lib.atift_set_force_units(self._cal, b"N") != 0:
-			raise RuntimeError("SetForceUnits 失败")
+			raise RuntimeError("SetForceUnits Failed")
 		if self._lib.atift_set_torque_units(self._cal, b"N-m") != 0:
-			raise RuntimeError("SetTorqueUnits 失败")
+			raise RuntimeError("SetTorqueUnits Failed")
 
 		# 4) NI-DAQ 任务（按你的接线修改通道/接法/量程）
 		self._ai_channels = [f"Dev1/ai{i}" for i in range(6)]
-		self._ai_termconf = TerminalConfiguration.RSE   # 差分则改为 TerminalConfiguration.DIFF
-		self._vmin, self._vmax = 0.0, 5.0              # ±10V 放大器就改成 -10.0, 10.0
+		self._ai_termconf = TerminalConfiguration.RSE   # For differential mode, set to TerminalConfiguration.DIFF;
+		self._vmin, self._vmax = 0.0, 5.0              # for a ±10V amplifier, change to -10.0, 10.0;
 		self._ai_task = nidaqmx.Task()
 		for ch in self._ai_channels:
 			self._ai_task.ai_channels.add_ai_voltage_chan(
@@ -221,12 +229,12 @@ class DataGatherer_45(object):
 
 	############################# FT SENSOR FUNCTIONS ##################################
 	def _read_volts_once(self):
-		"""从 NI-DAQ 读取 6 路电压（单帧）。"""
+		"""read six voltage channels from the NI-DAQ (single frame);"""
 		v = self._ai_task.read()  # list 长度=6
 		return [float(x) for x in v]
 
 	def _bias_from_volts(self, volts6):
-		"""调用 ATI DLL 的 Bias（以电压为基准置零）。"""
+		"""call the ATI DLL’s Bias function to zero based on voltage;"""
 		import ctypes as C
 		from ctypes import c_double
 		v_arr = (c_double * 6)(*volts6)
@@ -234,22 +242,22 @@ class DataGatherer_45(object):
 		self._biased = True
 
 	def tare(self, n = 200):
-		"""归零：连续读取 n 帧电压均值 → Bias。"""
+		"""zeroing: continuously read n frames of voltage and take the mean → Bias;"""
 		import statistics
 		buf = [self._read_volts_once() for _ in range(n)]
 		means = [statistics.fmean(ch) for ch in zip(*buf)]
 		self._bias_from_volts(means)
-		self.mean = means[:]   # 兼容旧语义
+		self.mean = means[:]  
 		return means
 
 	def zero(self):
-		"""取消偏置（兼容旧接口）。"""
+		"""remove the bias"""
 		self.mean = [0] * 6
 		self._bias_from_volts([0,0,0,0,0,0])
 		self._biased = False
 
 	def receive(self):
-		"""读取一帧：NI-DAQ 电压 → ATI DLL 转 Fx,Fy,Fz,Tx,Ty,Tz（N, N·m）。"""
+		"""read one frame: NI-DAQ voltage → ATI DLL converts to Fx, Fy, Fz, Tx, Ty, Tz (N, N·m);"""
 		import ctypes as C
 		from ctypes import c_double
 
@@ -297,7 +305,7 @@ class DataGatherer_45(object):
 
 	def startStreaming(self, handler = True):
 		if not self._biased:
-			self.tare(n=200)   # 启动前自动归零（可按需保留/移除）
+			self.tare(n=200)   # perform auto-zeroing before startup (can be kept or removed as needed).
 		if handler:
 			self.stream = True
 			self.thread = Thread(target = self.receiveHandler)
@@ -353,3 +361,9 @@ class DataGatherer_45(object):
 		self.stop()
 
 lock = Lock()
+
+from tactile_feature_extraction import TIP_ID
+from tactile_feature_extraction import ROOT_PATH
+folder = f"collect_{TIP_ID}_5D_surface" 
+dataPath = os.path.join(ROOT_PATH, folder)
+x=DataGatherer_45(resume=0, dataPath=dataPath, time_series=False, display_image=True, resize=[False, (300,225)])

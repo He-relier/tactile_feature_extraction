@@ -9,6 +9,7 @@ def col_rename(path):
     names = []
 
     for i, label in enumerate(df['data_name']):
+        print(i, label)
         nub=int(label.split('_')[1])
         names.append(f'image_{nub}.png')
 

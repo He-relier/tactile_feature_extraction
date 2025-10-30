@@ -25,7 +25,7 @@ Fx = []
 Fy = [] 
 Fz = []
 frames = []
-sample_range = (0, 7000)#3000
+sample_range = (0, 1500)#3000
 n_samples = sample_range[1]
 for i in tqdm(range(sample_range[0], sample_range[1])):
     try:
