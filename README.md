@@ -1,6 +1,12 @@
-This repository is based on the force sensor data collection and training designed using **NI-USB-6211** and **ATI Mini45**.
-Currently, it only supports **Windows**.
+# Tactile Feature Extraction: Code for tactile data collection and supervised learning
 
+This repo contains code for tactile data collection with a vision-based tactile sensor and supervised learnig of tactile features. 
+The data is collected using a UR5 and a force torque sensor to obtain labels for each corresponding tactile image. The data is then used for supervised learning to provide a model for predicting tactile features from tactile images in real-time.
+
+This repository is based on the force sensor using **NI-USB-6211** and **ATI Mini45**.
+Currently, it only supports **Windows** due to the NI-SUB-6211 driver.
+
+**Parent Branch：https://github.com/maxyang27896/tactile_feature_extraction?tab=readme-ov-file**
 
 ATI F/T mini45  Serial Number：
 FT39618
